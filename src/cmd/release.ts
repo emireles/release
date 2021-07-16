@@ -92,6 +92,10 @@ export const handler = async (argv: Arguments): Promise<void> => {
 
   // Create release branch and commit changes.
   await exec('git', ['checkout', '-b', `release/v${nextVersion}`], cwd);
-  await exec('git', ['add', '.'], cwd);
+  await exec(
+    'git',
+    ['add', 'package.json', 'CHANGELOG.md', 'device-types/*/attributes.json'],
+    cwd
+  );
   await exec('git', ['commit', '-m', `v${nextVersion}`], cwd);
 };

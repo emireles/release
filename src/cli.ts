@@ -7,7 +7,7 @@ import { config } from 'dotenv';
 import fse from 'fs-extra';
 import yargs from 'yargs';
 
-config();
+config({ path: path.join(__dirname, '../.env') }); // Relative to dist/
 
 const { version } = fse.readJsonSync(path.join(__dirname, '../package.json'));
 
