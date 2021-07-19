@@ -94,7 +94,12 @@ export const handler = async (argv: Arguments): Promise<void> => {
   await exec('git', ['checkout', '-b', `release/v${nextVersion}`], cwd);
   await exec(
     'git',
-    ['add', 'package.json', 'CHANGELOG.md', 'device-types/*/attributes.json'],
+    [
+      'add',
+      'package.json',
+      'CHANGELOG.md',
+      ...(hasDeviceTypes ? ['device-types/*/attributes.json'] : []),
+    ],
     cwd
   );
   await exec('git', ['commit', '-m', `v${nextVersion}`], cwd);
