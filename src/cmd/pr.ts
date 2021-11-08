@@ -21,7 +21,7 @@ export const builder = {
     demandOption: true,
     ...(process.env.DEFAULT_PR_REVIEWER
       ? {
-          default: process.env.DEFAULT_PR_REVIEWER,
+          default: process.env.DEFAULT_PR_REVIEWER.split(','),
         }
       : {}),
   },

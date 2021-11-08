@@ -4,7 +4,9 @@
 
 1. Create a copy of `.env.example` called `.env`.
 2. Define `DEFAULT_PR_REVIEWER` in `.env`.
-3. Run `npm` and `npm link`.
+3. Run `npm install` and `npm link`.
+
+For multiple default PR reviewers, please separate the usernames with a `,`. For example.
 
 ### Available Commands
 
