@@ -40,30 +40,6 @@ export const handler = async (argv: Arguments): Promise<void> => {
 
   await fse.writeJson(packageFile, packageJson, { spaces: 2 });
 
-  // Bump all device types.
-  const deviceTypesDir = path.join(cwd, 'device-types');
-  const hasDeviceTypes = fse.existsSync(deviceTypesDir);
-
-  if (hasDeviceTypes) {
-    const deviceTypes = await fse.readdir(deviceTypesDir);
-
-    await Promise.all(
-      deviceTypes.map(async (dir) => {
-        const attributesFile = path.join(
-          deviceTypesDir,
-          dir,
-          'attributes.json'
-        );
-
-        const attributes = await fse.readJson(attributesFile);
-
-        attributes.driver_type.version = nextVersion;
-
-        await fse.writeJson(attributesFile, attributes, { spaces: 2 });
-      })
-    );
-  }
-
   // Create a release section in CHANGELOG.md.
   const changelogFile = path.join(cwd, 'CHANGELOG.md');
   const changelog = await fse.readFile(changelogFile, 'utf-8');
@@ -92,15 +68,6 @@ export const handler = async (argv: Arguments): Promise<void> => {
 
   // Create release branch and commit changes.
   await exec('git', ['checkout', '-b', `release/v${nextVersion}`], cwd);
-  await exec(
-    'git',
-    [
-      'add',
-      'package.json',
-      'CHANGELOG.md',
-      ...(hasDeviceTypes ? ['device-types/*/attributes.json'] : []),
-    ],
-    cwd
-  );
+  await exec('git', ['add', 'package.json', 'CHANGELOG.md'], cwd);
   await exec('git', ['commit', '-m', `v${nextVersion}`], cwd);
 };
