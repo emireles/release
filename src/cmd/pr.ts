@@ -2,14 +2,13 @@ import path from 'path';
 
 import fse from 'fs-extra';
 
-import { exec, getBranches, getCurrentBranch } from '../utils';
+import { exec, getCurrentBranch, getMainBranches } from '../utils';
 
 interface Arguments {
   readonly [x: string]: unknown;
   readonly reviewers: Array<string>;
 }
 
-const MAIN_BRANCHES_RE = /remotes\/origin\/(?<branch>develop|main|master)$/;
 const RELEASE_RE = /^release\/v(.*)$/;
 
 export const command = 'pr [reviewers..]';
@@ -33,44 +32,38 @@ export const handler = async (argv: Arguments): Promise<void> => {
 
   const currentBranch = await getCurrentBranch(cwd);
 
-  if (!RELEASE_RE.test(currentBranch))
+  if (!RELEASE_RE.test(currentBranch)) {
     throw new Error('Command requires a release branch.');
+  }
 
   const packageFile = path.join(cwd, 'package.json');
   const { version } = await fse.readJson(packageFile);
-  const branches = await getBranches(cwd);
+  const branches = await getMainBranches(cwd);
   const reviewers = argv.reviewers
     .map((reviewer) => ['--reviewer', reviewer])
     .flat();
 
-  const prMessage = `### Release v${version}`;
-
-  await branches
-    .map((branch) => branch.match(MAIN_BRANCHES_RE))
-    .reduce(
-      (lastTarget, target) =>
-        lastTarget.then(async () => {
-          if (target && target.groups?.branch) {
-            const { branch } = target.groups;
-
-            console.log(`${branch}`);
-            await exec(
-              'gh',
-              [
-                'pr',
-                'create',
-                '--title',
-                `Release v${version}`,
-                '--body',
-                prMessage,
-                '--base',
-                branch,
-                ...reviewers,
-              ],
-              cwd
-            );
-          }
-        }),
-      Promise.resolve()
-    );
+  // Open a PR to main/master and develop.
+  await branches.reduce(
+    (lastPromise, branch) =>
+      lastPromise.then(async () => {
+        console.log(`${branch}`);
+        await exec(
+          'gh',
+          [
+            'pr',
+            'create',
+            '--title',
+            `Release v${version}`,
+            '--body',
+            `### Release v${version}`,
+            '--base',
+            branch,
+            ...reviewers,
+          ],
+          cwd
+        );
+      }),
+    Promise.resolve()
+  );
 };

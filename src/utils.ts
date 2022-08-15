@@ -1,5 +1,7 @@
 import execa from 'execa';
 
+const MAIN_BRANCHES_RE = /remotes\/origin\/(?<branch>develop|main|master)$/;
+
 export const exec = (
   bin: string,
   args: Array<string>,
@@ -15,12 +17,23 @@ export const exec = (
 export const getBranches = async (cwd: string): Promise<Array<string>> => {
   const branches = await execa('git', ['branch', '-a'], { cwd, all: true });
 
-  if (branches.all)
-    return branches.all
-      .split('\n')
-      .map((branch) => branch.replace(/^\*? +/, ''));
+  if (!branches.all) {
+    throw new Error(`Could not get all branches.`);
+  }
 
-  throw new Error(`Could not get all branches.`);
+  return branches.all.split('\n').map((branch) => branch.replace(/^\*? +/, ''));
+};
+
+export const getMainBranches = async (cwd: string): Promise<string[]> => {
+  const branches = await getBranches(cwd);
+
+  return branches
+    .map((branch) => branch.match(MAIN_BRANCHES_RE))
+    .reduce(
+      (arr, match) =>
+        match && match.groups?.branch ? arr.concat([match.groups.branch]) : arr,
+      [] as string[]
+    );
 };
 
 export const getCurrentBranch = async (cwd: string): Promise<string> => {
@@ -29,9 +42,11 @@ export const getCurrentBranch = async (cwd: string): Promise<string> => {
     all: true,
   });
 
-  if (branch.all) return branch.all;
+  if (!branch.all) {
+    throw new Error(`Could not get current branch.`);
+  }
 
-  throw new Error(`Could not get current branch.`);
+  return branch.all;
 };
 
 export const getRepoName = async (cwd: string): Promise<string> => {
@@ -42,7 +57,9 @@ export const getRepoName = async (cwd: string): Promise<string> => {
 
   const match = remote.all?.match(/labforward\/(?<repoName>.*)\.git/);
 
-  if (match && match.groups?.repoName) return match.groups.repoName;
+  if (!match || !match.groups?.repoName) {
+    throw new Error(`Could not get repo name in "${remote.all}".`);
+  }
 
-  throw new Error(`Could not get repo name in \`${remote.all}\``);
+  return match.groups.repoName;
 };

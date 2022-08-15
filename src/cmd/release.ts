@@ -4,7 +4,7 @@ import fse from 'fs-extra';
 import { inc } from 'semver';
 import type { ReleaseType } from 'semver';
 
-import { exec, getRepoName } from '../utils';
+import { exec, getMainBranches, getRepoName } from '../utils';
 
 interface Arguments {
   readonly [x: string]: unknown;
@@ -25,9 +25,18 @@ export const builder = {
 export const handler = async (argv: Arguments): Promise<void> => {
   const cwd = process.cwd();
 
-  // Pull latest changes.
-  await exec('git', ['checkout', 'develop'], cwd);
-  await exec('git', ['pull'], cwd);
+  // Pull latest changes in main/master and develop.
+  const branches = await getMainBranches(cwd);
+
+  await branches.reduce(
+    (lastPromise, branch) =>
+      lastPromise.then(async () => {
+        await exec('git', ['fetch', 'origin', branch], cwd);
+        await exec('git', ['checkout', branch], cwd);
+        await exec('git', ['pull'], cwd);
+      }),
+    Promise.resolve()
+  );
 
   // Bump version in package.json.
   const packageFile = path.join(cwd, 'package.json');
@@ -66,8 +75,21 @@ export const handler = async (argv: Arguments): Promise<void> => {
     )
   );
 
-  // Create release branch and commit changes.
+  // All repos should contain one production branch.
+  // Most repositories either have main or master, but not both.
+  const mainBranch = branches.find(
+    (branch) => branch === 'main' || branch === 'master'
+  );
+
+  // Create release branch.
   await exec('git', ['checkout', '-b', `release/v${nextVersion}`], cwd);
+
+  // Sync release branch with production branch.
+  if (mainBranch) {
+    await exec('git', ['merge', mainBranch], cwd);
+  }
+
+  // Commit changes.
   await exec('git', ['add', 'package.json', 'CHANGELOG.md'], cwd);
   await exec('git', ['commit', '-m', `v${nextVersion}`], cwd);
 };
