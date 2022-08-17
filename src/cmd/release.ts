@@ -28,15 +28,16 @@ export const handler = async (argv: Arguments): Promise<void> => {
   // Pull latest changes in main/master and develop.
   const branches = await getMainBranches(cwd);
 
-  await branches.reduce(
-    (lastPromise, branch) =>
-      lastPromise.then(async () => {
-        await exec('git', ['fetch', 'origin', branch], cwd);
-        await exec('git', ['checkout', branch], cwd);
-        await exec('git', ['pull'], cwd);
-      }),
-    Promise.resolve()
-  );
+  await branches
+    .sort((a, _) => (a === 'develop' ? 1 : -1)) // Make sure develop gets checked out last.
+    .reduce(
+      (lastPromise, branch) =>
+        lastPromise.then(async () => {
+          await exec('git', ['checkout', branch], cwd);
+          await exec('git', ['pull'], cwd);
+        }),
+      Promise.resolve()
+    );
 
   // Bump version in package.json.
   const packageFile = path.join(cwd, 'package.json');
