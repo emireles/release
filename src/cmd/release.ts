@@ -9,6 +9,7 @@ import { exec, getMainBranches, getRepoName } from '../utils';
 interface Arguments {
   readonly [x: string]: unknown;
   readonly type: ReleaseType;
+  readonly version?: string;
 }
 
 export const command = '$0 <type>';
@@ -16,8 +17,12 @@ export const describe = 'Bump a package and create a release branch.';
 export const builder = {
   type: {
     describe: 'Desired version bump.',
-    choices: ['patch', 'minor', 'major'],
+    choices: ['patch', 'minor', 'major', 'custom'],
     demandOption: true,
+  },
+  ver: {
+    describe: 'A custom version to bump.',
+    type: 'string',
   },
 };
 
@@ -42,9 +47,8 @@ export const handler = async (argv: Arguments): Promise<void> => {
   // Bump version in package.json.
   const packageFile = path.join(cwd, 'package.json');
   const packageJson = await fse.readJson(packageFile);
-  const nextVersion = packageJson?.version
-    ? inc(packageJson.version, argv.type)
-    : '1.0.0';
+  const nextVersion =
+    argv.type === 'custom' ? argv.ver : inc(packageJson.version, argv.type);
 
   packageJson.version = nextVersion;
 
